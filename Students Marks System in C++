@@ -1,0 +1,101 @@
+#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+int main()
+{
+ map<string, pair<int, int>> Map;
+ cout << "Enter number of students\n";
+ int Num;
+ cin >> Num;
+ int Sum = 0;
+ int Counter = 0;
+ string Gradename;
+  if (Num <= 0)
+    {
+     cout << "Number of students must be greater than 0.\n";
+     return 0;
+    }
+    cout << "Enter Name & Id & Degree\n";
+    for (int i = 0; i < Num; ++i)
+    {
+        string Name;
+        int Num1;
+        int Grade;
+        cin >> Name >> Num1 >> Grade;
+        Map[Name] = {Num1, Grade};
+    }
+    cout << "Students grade are\n";
+    int MaxGrade = -1;
+    int MinGrade = 1000;
+    int Maxid;
+    int Minid;
+    string MaxName;
+    string MinName;
+    int Passed = 0;
+    int Failed = 0;
+    for (auto Val : Map)
+    {
+        if (Val.second.second >= 900)
+        {
+            Gradename = "Excellent";
+        }
+        else if (Val.second.second >= 800)
+        {
+            Gradename = "Very Good";
+        }
+        else if (Val.second.second >= 651)
+        {
+            Gradename = "Good";
+        }
+        else if (Val.second.second >= 351)
+        {
+            Gradename = "Pass";
+        }
+        else
+        {
+            Gradename = "Fail";
+        }
+        if (Val.second.second > MaxGrade)
+        {
+            Maxid = Val.second.first;
+            MaxGrade = Val.second.second;
+            MaxName = Val.first;
+        }
+        if (Val.second.second < MinGrade)
+        {
+            Minid = Val.second.first;
+            MinGrade = Val.second.second;
+            MinName = Val.first;
+        }
+        if (Val.second.second >= 351)
+        {
+            ++Passed;
+        }
+        else
+        {
+           ++Failed;
+        }
+    double Percentage = static_cast<double>(Val.second.second) / 1000 * 100;
+        cout << Val.first << " "
+             << Val.second.first << " "
+             << Gradename << " - "
+             << Percentage << "%\n";
+        Sum += Val.second.second;
+        ++Counter;
+    }
+    double Avg = static_cast<double>(Sum) / Counter;
+    double PassRate = static_cast<double>(Passed) / Counter * 100;
+    double FailRate = static_cast<double>(Failed) / Counter * 100;
+    cout << "Highest Grade: " << MaxGrade
+         << " - Student ID: " << Maxid
+         << " - Name " << MaxName << "\n";
+    cout << "Lowest Grade: " << MinGrade
+         << " - Student ID: " << Minid
+         << " - Name " << MinName << "\n";
+    cout << "Total grades is " << Sum << "\n";
+    cout << "Grade average is " << Avg << "\n";
+    cout << "Success percent is " << PassRate << "%\n";
+    cout << "Failling percent is " << FailRate << "%\n";
+    return 0;
+}
