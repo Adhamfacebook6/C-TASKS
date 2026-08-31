@@ -1,0 +1,54 @@
+#include <iostream>
+#include <map>
+#include <algorithm>
+#include <string>
+using namespace std;
+int main()
+{
+ map<int, string> Map;
+ while (true)
+ {
+   int Num;
+   cout << "Enter year of birth\n";
+   cin >> Num;
+   if (Num == 0)
+   {
+     break;
+   }
+   if (Num < 0)
+   {
+     cout << "Not allowed\n";
+     //return 0;
+     continue;
+    // break;
+   }
+   string Name;
+   cout << "Enter name\n";
+   cin >> Name;
+    Map[Num] = Name;
+ }
+  if (Map.empty())
+  {
+    cout << "Map is empty\n";
+    return 0;
+  }
+   int SearchNum;
+    cout << "\nEnter year to search: ";
+    cin >> SearchNum;
+    auto IT = Map.find(SearchNum);
+    if (IT != Map.end())
+    {
+      cout << "Found: " << IT->second << "\n";
+    }
+   else
+   {
+    cout << "This year not found\n";
+    }
+  cout << "Map elements count is " << Map.size() << "\n";
+  cout << "Map Elements are\n";
+  for (auto IT1 = Map.begin(); IT1 != Map.end(); ++IT1)
+  {
+    cout << IT1->first << " " << IT1->second << "\n";
+  }
+ return 0;
+}
