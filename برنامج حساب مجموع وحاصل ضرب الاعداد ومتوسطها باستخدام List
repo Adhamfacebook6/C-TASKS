@@ -1,0 +1,61 @@
+#include <iostream>
+#include <list>
+#include <algorithm>
+using namespace std;
+int main()
+{
+ list<int> List;
+ cout << "Enter list elements\n";
+ while(true)
+ {
+   int Nums;
+   cin >> Nums;
+   if (Nums == 0)
+   {
+     break;
+   }
+      if (find(List.begin(), List.end(), Nums) == List.end())
+        {
+          List.emplace_front(Nums);
+        }
+      else
+       {
+        cout << "Element already entered\n";
+       }
+ }
+ if (List.empty())
+ {
+   cout << "List is empty\n";
+   return 0;
+ }
+ else
+ {
+   cout << "List not empty\n";
+ }
+ int Sum = 0;
+ long long Multiply = 1;
+ int Counter = 0;
+ double Avg = static_cast<double>(Sum) / List.size();
+ List.sort();
+ cout << "List elements are\n";
+ for (int Val : List)
+ {
+   ++Counter;
+   cout << Val << " ";
+   Sum += Val;
+   Multiply *= Val;
+
+   if (Counter % 5  == 0)
+   {
+     cout << "\n=================\n";
+   }
+ }
+ cout << endl;
+ cout << "List elements count is " << List.size() << "\n";
+ cout << "Min element value is " << *min_element(List.begin(), List.end()) << "\n";
+ cout << "Max element value is " << *max_element(List.begin(), List.end()) << "\n";
+ cout << "List elements total is " << Sum << "\n";
+ cout << "The product of the list items is " << Multiply << "\n";
+ cout << "The average number of elements on the list is " << Avg;
+ return 0;
+}
