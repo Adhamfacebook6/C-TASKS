@@ -1,0 +1,72 @@
+#include <iostream>
+#include <algorithm>
+#include <set>
+#include <limits>
+using namespace std;
+int main()
+{
+ multiset<int> List;
+ cout << "Enter list elements\n";
+ while(true)
+ {
+   int Nums;
+   if (!(cin >> Nums))
+    {
+       cout << "Invalid input, please enter numbers only\n";
+       cin.clear();
+       cin.ignore(numeric_limits<streamsize>::max(), '\n');
+       continue;
+    }
+   if (Nums == 0)
+   {
+     break;
+   }
+   if(Nums < 0)
+   {
+     cout << "Not allowed\n";
+     continue;
+   }
+   if (find(List.begin(), List.end(), Nums) == List.end())
+   {
+    List.insert(Nums);
+   }
+   else
+   {
+     cout << "Element already entered\n";
+   }
+ }
+ if (List.empty())
+ {
+   cout << "List is empty\n";
+   return 0;
+ }
+ else
+ {
+  cout << "List not empty\n";
+ }
+ int Sum = 0;
+ long long Multiply = 1;
+ int Counter = 0;
+ cout << "List elements are\n";
+ for (auto It = List.rbegin(); It != List.rend(); ++It)
+ {
+   ++Counter;
+   cout << *It << " ";
+   Sum += *It;
+   Multiply *= *It;
+   if (Counter % 5 == 0)
+   {
+     cout << "\n==================\n";
+   }
+ }
+ double AVG = static_cast<double> (Sum) / Counter;
+ cout << "\n";
+ cout << "List elements count is " << List.size() << "\n";
+ cout << "Maximum list elements count Is " << List.max_size() << "\n";
+ cout << "Min element value is " << *min_element(List.begin(), List.end()) << "\n";
+ cout << "Max element value is " << *max_element(List.begin(), List.end()) << "\n";
+ cout << "List elements total is " << Sum << "\n";
+  cout << "The product of the list items is " << Multiply << "\n";
+ cout << "The average number of elements on the list is " << AVG;
+ return 0;
+}
