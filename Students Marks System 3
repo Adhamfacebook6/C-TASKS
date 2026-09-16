@@ -104,9 +104,7 @@ int main()
     string SearchName;
     cout << "\nEnter Student Name: ";
     cin >> SearchName;
-
     auto Range = Map.equal_range(SearchName);
-
     if (Range.first == Range.second)
     {
         cout << "Student Not Found\n";
@@ -115,17 +113,13 @@ int main()
     {
         int StudentSum = 0;
         int StudentCount = 0;
-
         int StudentMax = -1;
         int StudentMin = 1001;
-
         cout << "\n" << SearchName << ":\n";
-
         for (auto It = Range.first; It != Range.second; ++It)
         {
             int Id = It->second.first;
             int Mark = It->second.second;
-
             cout << "ID: " << Id
                  << " - Mark: " << Mark << "\n";
             StudentSum += Mark;
