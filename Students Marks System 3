@@ -1,0 +1,150 @@
+#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+int main()
+{
+    multimap<string, pair<int, int>> Map;
+    cout << "Enter Number Of Students\n";
+    int Num;
+    cin >> Num;
+    if (Num <= 0)
+    {
+        cout << "Invalid Value Please Enter Another Number\n";
+        return 0;
+    }
+    int Sum = 0;
+    int Counter = 0;
+    string Gradename;
+    cout << "Enter Name & Id & Mark\n";
+    for (int i = 0; i < Num; ++i)
+    {
+        int Id;
+        string Name;
+        int Mark;
+        cin >> Name >> Id >> Mark;
+        Map.insert({Name, {Id, Mark}});
+    }
+    cout << "\nStudents Grades Is\n";
+    int Mingrade = 1000;
+    int Maxgrade = -1;
+    int Minid;
+    int Maxid;
+    string Maxname;
+    string Minname;
+    int Passed = 0;
+    int Faild = 0;
+    for (auto Val : Map)
+    {
+        if (Val.second.second >= 900)
+        {
+            Gradename = "Excellent";
+        }
+        else if (Val.second.second >= 850)
+        {
+            Gradename = "Very Good";
+        }
+        else if (Val.second.second >= 700)
+        {
+            Gradename = "Good";
+        }
+        else if (Val.second.second >= 550)
+        {
+            Gradename = "Pass";
+        }
+        else
+        {
+            Gradename = "Fail";
+        }
+        if (Val.second.second > Maxgrade)
+        {
+            Maxid = Val.second.first;
+            Maxgrade = Val.second.second;
+            Maxname = Val.first;
+        }
+        if (Val.second.second < Mingrade)
+        {
+            Minid = Val.second.first;
+            Mingrade = Val.second.second;
+            Minname = Val.first;
+        }
+        if (Val.second.second >= 400)
+        {
+            ++Passed;
+        }
+        else
+        {
+            ++Faild;
+        }
+        double Percentage =
+            static_cast<double>(Val.second.second) / 1000 * 100;
+        cout << Val.first << " "
+             << Val.second.first << " "
+             << Gradename << " - "
+             << Percentage << "%\n";
+        Sum += Val.second.second;
+        ++Counter;
+    }
+    double Avg = static_cast<double>(Sum) / Counter;
+    double Passrate = static_cast<double>(Passed) / Counter * 100;
+    double Failrate = static_cast<double>(Faild) / Counter * 100;
+    cout << "\nHighest grade " << Maxgrade
+         << " - Students Id " << Maxid
+         << " - Name " << Maxname << "\n";
+    cout << "Lowest grade " << Mingrade
+         << " - Students Id " << Minid
+         << " - Name " << Minname << "\n";
+    cout << "Total Grades Is " << Sum << "\n";
+    cout << "Average Grades Is " << Avg << "\n";
+    cout << "Success percent is " << Passrate << "%\n";
+    cout << "Failing Percent Is " << Failrate << "%\n";
+    // =====================================
+    // Search for a specific student
+    // =====================================
+    string SearchName;
+    cout << "\nEnter Student Name: ";
+    cin >> SearchName;
+
+    auto Range = Map.equal_range(SearchName);
+
+    if (Range.first == Range.second)
+    {
+        cout << "Student Not Found\n";
+    }
+    else
+    {
+        int StudentSum = 0;
+        int StudentCount = 0;
+
+        int StudentMax = -1;
+        int StudentMin = 1001;
+
+        cout << "\n" << SearchName << ":\n";
+
+        for (auto It = Range.first; It != Range.second; ++It)
+        {
+            int Id = It->second.first;
+            int Mark = It->second.second;
+
+            cout << "ID: " << Id
+                 << " - Mark: " << Mark << "\n";
+            StudentSum += Mark;
+            ++StudentCount;
+            if (Mark > StudentMax)
+            {
+                StudentMax = Mark;
+            }
+
+            if (Mark < StudentMin)
+            {
+                StudentMin = Mark;
+            }
+        }
+        double StudentAverage =
+            static_cast<double>(StudentSum) / StudentCount;
+        cout << "\nAverage: " << StudentAverage << "\n";
+        cout << "Highest: " << StudentMax << "\n";
+        cout << "Lowest: " << StudentMin << "\n";
+    }
+    return 0;
+}
