@@ -1,0 +1,982 @@
+#include <iostream>
+#include <map>
+#include <string>
+#include <iomanip>
+using namespace std;
+// ==========================================
+// Get Grade Name
+// ==========================================
+string GetGradeName(int Mark)
+{
+    if (Mark >= 900)
+        return "Excellent";
+    else if (Mark >= 850)
+        return "Very Good";
+    else if (Mark >= 700)
+        return "Good";
+    else if (Mark >= 550)
+        return "Pass";
+    else
+        return "Fail";
+}
+// ==========================================
+// Get Letter Grade
+// ==========================================
+char GetLetterGrade(int Mark)
+{
+    if (Mark >= 900)
+        return 'A';
+    else if (Mark >= 850)
+        return 'B';
+    else if (Mark >= 700)
+        return 'C';
+    else if (Mark >= 550)
+        return 'D';
+    else
+        return 'F';
+}
+// ==========================================
+// Get Valid Mark
+// ==========================================
+int GetValidMark()
+{
+    int Mark;
+
+    while (true)
+    {
+        cin >> Mark;
+
+        if (Mark >= 0 && Mark <= 1000)
+        {
+            return Mark;
+        }
+        cout << "Invalid Mark!\n";
+        cout << "Please Enter Mark Between 0 And 1000: ";
+    }
+}
+// ==========================================
+// Display One Student
+// ==========================================
+void DisplayStudent(
+    const string& Name,
+    int Id,
+    int Mark)
+{
+    cout << "Name: " << Name << "\n";
+    cout << "ID: " << Id << "\n";
+    cout << "Mark: " << Mark << "\n";
+
+    cout << "Percentage: "
+         << static_cast<double>(Mark) / 1000 * 100
+         << "%\n";
+    cout << "Grade: "
+         << GetGradeName(Mark)
+         << "\n";
+    cout << "Letter Grade: "
+         << GetLetterGrade(Mark)
+         << "\n";
+}
+// ==========================================
+// Display All Students
+// ==========================================
+void DisplayAllStudents(
+    const multimap<string, pair<int, int>>& Map)
+{
+    if (Map.empty())
+    {
+        cout << "\nNo Students Found.\n";
+        return;
+    }
+    cout << "\n=====================================\n";
+    cout << "          All Students\n";
+    cout << "=====================================\n";
+    for (auto Val : Map)
+    {
+        string Name = Val.first;
+        int Id = Val.second.first;
+        int Mark = Val.second.second;
+        cout << "Name: " << Name
+             << " | ID: " << Id
+             << " | Mark: " << Mark
+             << " | Grade: " << GetGradeName(Mark)
+             << " | Letter: " << GetLetterGrade(Mark)
+             << " | Percentage: "
+             << static_cast<double>(Mark) / 1000 * 100
+             << "%\n";
+    }
+}
+// ==========================================
+// Add New Student
+// ==========================================
+void AddStudent(
+    multimap<string, pair<int, int>>& Map)
+{
+    string Name;
+    int Id;
+    cout << "\nEnter Student Name: ";
+    cin >> Name;
+    cout << "Enter Student ID: ";
+    cin >> Id;
+    cout << "Enter Student Mark (0 - 1000): ";
+    int Mark = GetValidMark();
+    // No ID checking
+    // Duplicate Name + ID is allowed
+    Map.insert({
+        Name,
+        {Id, Mark}
+    });
+    cout << "\nStudent Added Successfully!\n";
+}
+// ==========================================
+// Search Student By ID
+// ==========================================
+void SearchById(
+    const multimap<string, pair<int, int>>& Map)
+{
+    int SearchId;
+    cout << "\nEnter Student ID: ";
+    cin >> SearchId;
+    bool Found = false;
+    cout << "\n=====================================\n";
+    cout << "       Students With ID "
+         << SearchId << "\n";
+    cout << "=====================================\n";
+    for (auto It = Map.begin(); It != Map.end(); ++It)
+    {
+        int Id = It->second.first;
+
+        if (Id == SearchId)
+        {
+            DisplayStudent(
+                It->first,
+                It->second.first,
+                It->second.second
+            );
+            cout << "-------------------------------------\n";
+
+            Found = true;
+        }
+    }
+
+    if (!Found)
+    {
+        cout << "Student Not Found.\n";
+    }
+}
+// ==========================================
+// Search Student By Name
+// ==========================================
+void SearchByName(
+    const multimap<string, pair<int, int>>& Map)
+{
+    string SearchName;
+
+    cout << "\nEnter Student Name: ";
+    cin >> SearchName;
+
+    auto Range = Map.equal_range(SearchName);
+
+    if (Range.first == Range.second)
+    {
+        cout << "Student Not Found\n";
+        return;
+    }
+
+    cout << "\n=====================================\n";
+    cout << "Students With Name: "
+         << SearchName << "\n";
+    cout << "=====================================\n";
+
+    for (auto It = Range.first;
+         It != Range.second;
+         ++It)
+    {
+        DisplayStudent(
+            It->first,
+            It->second.first,
+            It->second.second
+        );
+
+        cout << "-------------------------------------\n";
+    }
+}
+
+
+// ==========================================
+// Delete Student By ID
+// ==========================================
+void DeleteStudent(
+    multimap<string, pair<int, int>>& Map)
+{
+    int DeleteId;
+
+    cout << "\nEnter Student ID To Delete: ";
+    cin >> DeleteId;
+
+    bool Found = false;
+
+    for (auto It = Map.begin(); It != Map.end(); ++It)
+    {
+        if (It->second.first == DeleteId)
+        {
+            cout << "\nStudent Found:\n";
+
+            DisplayStudent(
+                It->first,
+                It->second.first,
+                It->second.second
+            );
+
+            Map.erase(It);
+
+            cout << "\nStudent Deleted Successfully!\n";
+
+            Found = true;
+
+            break;
+        }
+    }
+
+    if (!Found)
+    {
+        cout << "\nStudent Not Found!\n";
+    }
+}
+
+
+// ==========================================
+// Update Student
+// ==========================================
+void UpdateStudent(
+    multimap<string, pair<int, int>>& Map)
+{
+    int SearchId;
+
+    cout << "\nEnter Student ID To Update: ";
+    cin >> SearchId;
+
+    for (auto It = Map.begin(); It != Map.end(); ++It)
+    {
+        if (It->second.first == SearchId)
+        {
+            string OldName = It->first;
+            int OldId = It->second.first;
+            int OldMark = It->second.second;
+
+            cout << "\nCurrent Student Data:\n";
+
+            DisplayStudent(
+                OldName,
+                OldId,
+                OldMark
+            );
+
+            string NewName;
+            int NewMark;
+
+            cout << "\nEnter New Name: ";
+            cin >> NewName;
+
+            cout << "Enter New Mark (0 - 1000): ";
+            NewMark = GetValidMark();
+
+            // Delete old record
+            Map.erase(It);
+
+            // Insert updated record
+            Map.insert({
+                NewName,
+                {OldId, NewMark}
+            });
+
+            cout << "\nStudent Updated Successfully!\n";
+
+            return;
+        }
+    }
+
+    cout << "\nStudent Not Found!\n";
+}
+
+
+// ==========================================
+// Statistics
+// ==========================================
+void ShowStatistics(
+    const multimap<string, pair<int, int>>& Map)
+{
+    if (Map.empty())
+    {
+        cout << "\nNo Students Found.\n";
+        return;
+    }
+
+    int Sum = 0;
+
+    int Passed = 0;
+    int Failed = 0;
+
+    int MaxGrade = -1;
+    int MinGrade = 1001;
+
+    int ExcellentCount = 0;
+    int VeryGoodCount = 0;
+    int GoodCount = 0;
+    int PassCount = 0;
+    int FailCount = 0;
+
+
+    for (auto Val : Map)
+    {
+        int Mark = Val.second.second;
+
+        Sum += Mark;
+
+
+        if (Mark > MaxGrade)
+            MaxGrade = Mark;
+
+
+        if (Mark < MinGrade)
+            MinGrade = Mark;
+
+
+        // Passed / Failed
+
+        if (Mark >= 400)
+            ++Passed;
+        else
+            ++Failed;
+
+
+        // Count Grades
+
+        if (Mark >= 900)
+            ++ExcellentCount;
+
+        else if (Mark >= 850)
+            ++VeryGoodCount;
+
+        else if (Mark >= 700)
+            ++GoodCount;
+
+        else if (Mark >= 550)
+            ++PassCount;
+
+        else
+            ++FailCount;
+    }
+
+
+    int Counter = Map.size();
+
+
+    double Average =
+        static_cast<double>(Sum) / Counter;
+
+
+    double PassRate =
+        static_cast<double>(Passed) / Counter * 100;
+
+
+    double FailRate =
+        static_cast<double>(Failed) / Counter * 100;
+
+
+    cout << "\n=====================================\n";
+    cout << "             Statistics\n";
+    cout << "=====================================\n";
+
+
+    cout << "Total Students: "
+         << Counter << "\n";
+
+
+    cout << "Total Grades: "
+         << Sum << "\n";
+
+
+    cout << "Average Grade: "
+         << Average << "\n";
+
+
+    cout << "Highest Grade: "
+         << MaxGrade << "\n";
+
+
+    cout << "Lowest Grade: "
+         << MinGrade << "\n";
+
+
+    cout << "Passed Students: "
+         << Passed << "\n";
+
+
+    cout << "Failed Students: "
+         << Failed << "\n";
+
+
+    cout << fixed << setprecision(2);
+
+
+    cout << "Success Percent: "
+         << PassRate << "%\n";
+
+
+    cout << "Failing Percent: "
+         << FailRate << "%\n";
+
+
+    cout << "\nNumber Of Students In Each Grade:\n";
+
+
+    cout << "Excellent: "
+         << ExcellentCount << "\n";
+
+
+    cout << "Very Good: "
+         << VeryGoodCount << "\n";
+
+
+    cout << "Good: "
+         << GoodCount << "\n";
+
+
+    cout << "Pass: "
+         << PassCount << "\n";
+
+
+    cout << "Fail: "
+         << FailCount << "\n";
+}
+
+
+// ==========================================
+// Highest / Lowest Per Grade
+// ==========================================
+void HighestLowestEachGrade(
+    const multimap<string, pair<int, int>>& Map)
+{
+    if (Map.empty())
+    {
+        cout << "\nNo Students Found.\n";
+        return;
+    }
+
+
+    int ExcellentMax = -1;
+    int ExcellentMin = 1001;
+
+    int VeryGoodMax = -1;
+    int VeryGoodMin = 1001;
+
+    int GoodMax = -1;
+    int GoodMin = 1001;
+
+    int PassMax = -1;
+    int PassMin = 1001;
+
+    int FailMax = -1;
+    int FailMin = 1001;
+
+
+    for (auto Val : Map)
+    {
+        int Mark = Val.second.second;
+
+
+        if (Mark >= 900)
+        {
+            if (Mark > ExcellentMax)
+                ExcellentMax = Mark;
+
+            if (Mark < ExcellentMin)
+                ExcellentMin = Mark;
+        }
+
+
+        else if (Mark >= 850)
+        {
+            if (Mark > VeryGoodMax)
+                VeryGoodMax = Mark;
+
+            if (Mark < VeryGoodMin)
+                VeryGoodMin = Mark;
+        }
+
+
+        else if (Mark >= 700)
+        {
+            if (Mark > GoodMax)
+                GoodMax = Mark;
+
+            if (Mark < GoodMin)
+                GoodMin = Mark;
+        }
+
+
+        else if (Mark >= 550)
+        {
+            if (Mark > PassMax)
+                PassMax = Mark;
+
+            if (Mark < PassMin)
+                PassMin = Mark;
+        }
+
+
+        else
+        {
+            if (Mark > FailMax)
+                FailMax = Mark;
+
+            if (Mark < FailMin)
+                FailMin = Mark;
+        }
+    }
+
+
+    cout << "\n=====================================\n";
+    cout << "     Highest / Lowest Per Grade\n";
+    cout << "=====================================\n";
+
+
+    if (ExcellentMax != -1)
+    {
+        cout << "Excellent -> Highest: "
+             << ExcellentMax
+             << " | Lowest: "
+             << ExcellentMin << "\n";
+    }
+    else
+    {
+        cout << "Excellent -> No Students\n";
+    }
+
+
+    if (VeryGoodMax != -1)
+    {
+        cout << "Very Good -> Highest: "
+             << VeryGoodMax
+             << " | Lowest: "
+             << VeryGoodMin << "\n";
+    }
+    else
+    {
+        cout << "Very Good -> No Students\n";
+    }
+
+
+    if (GoodMax != -1)
+    {
+        cout << "Good -> Highest: "
+             << GoodMax
+             << " | Lowest: "
+             << GoodMin << "\n";
+    }
+    else
+    {
+        cout << "Good -> No Students\n";
+    }
+
+
+    if (PassMax != -1)
+    {
+        cout << "Pass -> Highest: "
+             << PassMax
+             << " | Lowest: "
+             << PassMin << "\n";
+    }
+    else
+    {
+        cout << "Pass -> No Students\n";
+    }
+
+
+    if (FailMax != -1)
+    {
+        cout << "Fail -> Highest: "
+             << FailMax
+             << " | Lowest: "
+             << FailMin << "\n";
+    }
+    else
+    {
+        cout << "Fail -> No Students\n";
+    }
+}
+
+
+// ==========================================
+// Display Passed Students
+// ==========================================
+void DisplayPassedStudents(
+    const multimap<string, pair<int, int>>& Map)
+{
+    bool Found = false;
+
+
+    cout << "\n=====================================\n";
+    cout << "          Passed Students\n";
+    cout << "=====================================\n";
+
+
+    for (auto Val : Map)
+    {
+        int Mark = Val.second.second;
+
+
+        if (Mark >= 400)
+        {
+            cout << Val.first
+                 << " | ID: "
+                 << Val.second.first
+                 << " | Mark: "
+                 << Mark
+                 << " | Grade: "
+                 << GetGradeName(Mark)
+                 << "\n";
+
+
+            Found = true;
+        }
+    }
+
+
+    if (!Found)
+        cout << "No Passed Students Found.\n";
+}
+
+
+// ==========================================
+// Display Failed Students
+// ==========================================
+void DisplayFailedStudents(
+    const multimap<string, pair<int, int>>& Map)
+{
+    bool Found = false;
+
+
+    cout << "\n=====================================\n";
+    cout << "          Failed Students\n";
+    cout << "=====================================\n";
+
+
+    for (auto Val : Map)
+    {
+        int Mark = Val.second.second;
+
+
+        if (Mark < 400)
+        {
+            cout << Val.first
+                 << " | ID: "
+                 << Val.second.first
+                 << " | Mark: "
+                 << Mark
+                 << " | Grade: "
+                 << GetGradeName(Mark)
+                 << "\n";
+
+
+            Found = true;
+        }
+    }
+
+
+    if (!Found)
+        cout << "No Failed Students Found.\n";
+}
+
+
+// ==========================================
+// Students Above Specific Grade
+// ==========================================
+void DisplayStudentsAboveGrade(
+    const multimap<string, pair<int, int>>& Map)
+{
+    cout << "\nEnter Minimum Grade: ";
+
+    int MinimumGrade = GetValidMark();
+
+    bool Found = false;
+
+
+    cout << "\n=====================================\n";
+
+    cout << "Students With Grade >= "
+         << MinimumGrade << "\n";
+
+    cout << "=====================================\n";
+
+
+    for (auto Val : Map)
+    {
+        int Mark = Val.second.second;
+
+
+        if (Mark >= MinimumGrade)
+        {
+            cout << Val.first
+                 << " | ID: "
+                 << Val.second.first
+                 << " | Mark: "
+                 << Mark
+                 << " | Grade: "
+                 << GetGradeName(Mark)
+                 << " | Letter: "
+                 << GetLetterGrade(Mark)
+                 << "\n";
+
+
+            Found = true;
+        }
+    }
+
+
+    if (!Found)
+        cout << "No Students Found.\n";
+}
+
+
+// ==========================================
+// Students With Highest Grade
+// ==========================================
+void DisplayHighestStudents(
+    const multimap<string, pair<int, int>>& Map)
+{
+    if (Map.empty())
+    {
+        cout << "\nNo Students Found.\n";
+        return;
+    }
+
+
+    int MaxGrade = -1;
+
+
+    // Find Highest Grade
+
+    for (auto Val : Map)
+    {
+        int Mark = Val.second.second;
+
+
+        if (Mark > MaxGrade)
+            MaxGrade = Mark;
+    }
+
+
+    cout << "\n=====================================\n";
+    cout << "       Students With Highest Grade\n";
+    cout << "=====================================\n";
+
+
+    cout << "Highest Grade: "
+         << MaxGrade
+         << "\n\n";
+
+
+    // Display ALL students
+    // with the highest grade
+
+    for (auto Val : Map)
+    {
+        int Id = Val.second.first;
+        string Name = Val.first;
+        int Mark = Val.second.second;
+
+
+        if (Mark == MaxGrade)
+        {
+            cout << "Name: "
+                 << Name
+                 << " | ID: "
+                 << Id
+                 << " | Mark: "
+                 << Mark
+                 << " | Grade: "
+                 << GetGradeName(Mark)
+                 << " | Letter: "
+                 << GetLetterGrade(Mark)
+                 << "\n";
+        }
+    }
+}
+
+
+// ==========================================
+// Main
+// ==========================================
+int main()
+{
+    multimap<string, pair<int, int>> Map;
+
+
+    cout << "Enter Number Of Students: ";
+
+    int Num;
+    cin >> Num;
+
+
+    if (Num <= 0)
+    {
+        cout << "Invalid Value!\n";
+        return 0;
+    }
+
+
+    // ==========================================
+    // Initial Student Input
+    // ==========================================
+
+    cout << "\nEnter Name & ID & Mark\n";
+
+
+    for (int i = 0; i < Num; ++i)
+    {
+        string Name;
+        int Id;
+        int Mark;
+
+
+        cout << "\nStudent "
+             << i + 1
+             << "\n";
+
+
+        cout << "Name: ";
+        cin >> Name;
+
+
+        cout << "ID: ";
+        cin >> Id;
+
+
+        cout << "Mark (0 - 1000): ";
+
+        Mark = GetValidMark();
+
+
+        // Duplicate Name + ID is allowed
+
+        Map.insert({
+            Name,
+            {Id, Mark}
+        });
+    }
+
+
+    // ==========================================
+    // Main Menu
+    // ==========================================
+
+    while (true)
+    {
+        cout << "\n\n";
+
+        cout << "=====================================\n";
+        cout << "      Student Management System\n";
+        cout << "=====================================\n";
+
+
+        cout << "1. Display All Students\n";
+        cout << "2. Add New Student\n";
+        cout << "3. Search By Name\n";
+        cout << "4. Search By ID\n";
+        cout << "5. Update Student\n";
+        cout << "6. Delete Student\n";
+        cout << "7. Show Statistics\n";
+        cout << "8. Highest / Lowest Per Grade\n";
+        cout << "9. Show Passed Students\n";
+        cout << "10. Show Failed Students\n";
+        cout << "11. Show Students Above Grade\n";
+        cout << "12. Show Students With Highest Grade\n";
+        cout << "0. Exit\n";
+
+
+        cout << "=====================================\n";
+
+        cout << "Enter Your Choice: ";
+
+
+        int Choice;
+        cin >> Choice;
+
+
+        switch (Choice)
+        {
+            case 1:
+
+                DisplayAllStudents(Map);
+
+                break;
+
+
+            case 2:
+
+                AddStudent(Map);
+
+                break;
+
+
+            case 3:
+
+                SearchByName(Map);
+
+                break;
+
+
+            case 4:
+
+                SearchById(Map);
+
+                break;
+
+
+            case 5:
+
+                UpdateStudent(Map);
+
+                break;
+
+
+            case 6:
+
+                DeleteStudent(Map);
+
+                break;
+
+
+            case 7:
+
+                ShowStatistics(Map);
+
+                break;
+
+
+            case 8:
+
+                HighestLowestEachGrade(Map);
+                break;
+            case 9:
+                DisplayPassedStudents(Map);
+                break;
+            case 10:
+                DisplayFailedStudents(Map);
+                break;
+            case 11:
+                DisplayStudentsAboveGrade(Map);
+                break;
+            case 12:
+                DisplayHighestStudents(Map);
+                break;
+            case 0:
+                cout << "\nProgram Ended.\n";
+                return 0;
+            default:
+                cout << "\nInvalid Choice!\n";
+        }
+    }
+    return 0;
+}
