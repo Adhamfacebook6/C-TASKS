@@ -494,7 +494,7 @@ void DisplayStudentsAboveGrade(
     int MinimumGrade;
     cout << "\nEnter Minimum Grade: ";
     MinimumGrade = GetValidMark();
-    bol Found = false;
+    bool Found = false;
     cout << "\n=====================================\n";
     cout << "Students With Grade >= "
          << MinimumGrade << "\n";
