@@ -6,216 +6,160 @@
 #include <vector>
 #include <algorithm>
 #include <limits>
-
 using namespace std;
-
 // ============================================================
 // Grade System
 // ============================================================
-
 const int EXCELLENT_MIN = 900;
 const int VERY_GOOD_MIN = 850;
 const int GOOD_MIN = 700;
 const int PASS_MIN = 550;
 const int MAX_MARK = 1000;
-
 // ============================================================
 // Student Data
 // ============================================================
-
 struct Student
 {
     string Name;
     int Id;
     int Mark;
 };
-
 using StudentMap = multimap<string, Student>;
-
 // ============================================================
 // Input Validation
 // ============================================================
-
 int GetValidInteger(const string& Message)
 {
     int Value;
-
     while (true)
     {
         cout << Message;
-
         cin >> Value;
-
         if (!cin.fail())
             return Value;
-
         cout << "Invalid Input! Please Enter A Number.\n";
-
         cin.clear();
-
         cin.ignore(
             numeric_limits<streamsize>::max(),
             '\n'
         );
     }
 }
-
 // ============================================================
 // Get Student Name
 // ============================================================
-
 string GetStudentName(const string& Message)
 {
     string Name;
-
     while (true)
     {
         cout << Message;
-
         cin.ignore(
-            numeric_limits<streamsize>::max(),
-            '\n'
+            numeric_limits<streamsize>::max(),'\n'
         );
-
         getline(cin, Name);
-
         if (!Name.empty())
             return Name;
-
         cout << "Name Cannot Be Empty.\n";
     }
 }
-
 // ============================================================
 // Get Valid Mark
 // ============================================================
-
 int GetValidMark()
 {
     int Mark;
-
     while (true)
     {
         Mark = GetValidInteger(
             "Enter Mark (0 - 1000): "
         );
-
         if (Mark >= 0 && Mark <= MAX_MARK)
             return Mark;
-
         cout << "Invalid Mark!\n";
         cout << "Mark Must Be Between 0 And 1000.\n";
     }
 }
-
 // ============================================================
 // Get Valid ID
 // ============================================================
-
 int GetValidId()
 {
     int Id;
-
     while (true)
     {
-        Id = GetValidInteger(
-            "Enter Student ID: "
+        Id = GetValidInteger("Enter Student ID: "
         );
-
         if (Id > 0)
             return Id;
-
         cout << "ID Must Be Greater Than 0.\n";
     }
 }
-
 // ============================================================
 // Get Valid Positive Number
 // ============================================================
-
 int GetValidPositiveNumber(const string& Message)
 {
     int Number;
-
     while (true)
     {
         Number = GetValidInteger(Message);
-
         if (Number > 0)
             return Number;
-
         cout << "Please Enter A Number Greater Than 0.\n";
     }
 }
-
 // ============================================================
 // Grade Name
 // ============================================================
-
 string GetGradeName(int Mark)
 {
     if (Mark >= EXCELLENT_MIN)
         return "Excellent";
-
     else if (Mark >= VERY_GOOD_MIN)
         return "Very Good";
-
     else if (Mark >= GOOD_MIN)
         return "Good";
-
     else if (Mark >= PASS_MIN)
         return "Pass";
-
     else
         return "Fail";
 }
-
 // ============================================================
 // Letter Grade
 // ============================================================
-
 char GetLetterGrade(int Mark)
 {
     if (Mark >= EXCELLENT_MIN)
         return 'A';
-
     else if (Mark >= VERY_GOOD_MIN)
         return 'B';
-
     else if (Mark >= GOOD_MIN)
         return 'C';
-
     else if (Mark >= PASS_MIN)
         return 'D';
-
     else
         return 'F';
 }
-
 // ============================================================
 // Passed / Failed
 // ============================================================
-
 bool IsPassed(int Mark)
 {
     return Mark >= PASS_MIN;
 }
-
 // ============================================================
 // Percentage
 // ============================================================
-
 double GetPercentage(int Mark)
 {
     return static_cast<double>(Mark)
          / MAX_MARK
          * 100;
 }
-
 // ============================================================
 // Check If ID Exists
 // ============================================================
-
 bool IsIdExists(
     const StudentMap& Map,
     int SearchId)
@@ -225,79 +169,57 @@ bool IsIdExists(
         if (Pair.second.Id == SearchId)
             return true;
     }
-
     return false;
 }
-
 // ============================================================
 // Get Student Count
 // ============================================================
-
 int GetStudentCount(const StudentMap& Map)
 {
     return static_cast<int>(Map.size());
 }
-
 // ============================================================
 // Convert Map To Vector
 // ============================================================
-
 vector<Student> GetStudentsVector(
     const StudentMap& Map)
 {
     vector<Student> Students;
-
     for (const auto& Pair : Map)
     {
         Students.push_back(Pair.second);
     }
-
     return Students;
 }
-
 // ============================================================
 // Display One Student
 // ============================================================
-
 void DisplayStudent(const Student& S)
 {
     cout << "Name: "
          << S.Name
          << "\n";
-
     cout << "ID: "
          << S.Id
          << "\n";
-
     cout << "Mark: "
          << S.Mark
          << "\n";
-
     cout << fixed << setprecision(2);
-
     cout << "Percentage: "
          << GetPercentage(S.Mark)
          << "%\n";
-
     cout << "Grade: "
-         << GetGradeName(S.Mark)
-         << "\n";
-
-    cout << "Letter Grade: "
-         << GetLetterGrade(S.Mark)
-         << "\n";
-
-    cout << "Status: "
-         << (IsPassed(S.Mark)
+         << GetGradeName(S.Mark) << "\n";
+    cout << "Letter Grade: " << GetLetterGrade(S.Mark) << "\n";
+    cout << "Status: "<< (IsPassed(S.Mark)
                 ? "Passed"
                 : "Failed")
          << "\n";
 }
-
 // ============================================================
 // Display All Students
 // ============================================================
-
 void DisplayAllStudents(
     const StudentMap& Map)
 {
@@ -306,15 +228,12 @@ void DisplayAllStudents(
         cout << "\nNo Students Found.\n";
         return;
     }
-
     cout << "\n============================================\n";
     cout << "              All Students\n";
     cout << "============================================\n";
-
     for (const auto& Pair : Map)
     {
         const Student& S = Pair.second;
-
         cout << S.Name
              << " | ID: "
              << S.Id
