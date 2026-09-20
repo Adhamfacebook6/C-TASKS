@@ -2,9 +2,7 @@
 #include <map>
 #include <string>
 #include <iomanip>
-
 using namespace std;
-
 // ==========================================
 // Get Grade Name
 // ==========================================
@@ -21,7 +19,6 @@ string GetGradeName(int Mark)
     else
         return "Fail";
 }
-
 // ==========================================
 // Get Letter Grade
 // ==========================================
@@ -38,28 +35,23 @@ char GetLetterGrade(int Mark)
     else
         return 'F';
 }
-
 // ==========================================
 // Get Valid Mark
 // ==========================================
 int GetValidMark()
 {
     int Mark;
-
     while (true)
     {
         cin >> Mark;
-
         if (Mark >= 0 && Mark <= 1000)
         {
             return Mark;
         }
-
         cout << "Invalid Mark!\n";
         cout << "Please Enter Mark Between 0 And 1000: ";
     }
 }
-
 // ==========================================
 // Check If ID Already Exists
 // ==========================================
@@ -74,10 +66,8 @@ bool IsIdExists(
             return true;
         }
     }
-
     return false;
 }
-
 // ==========================================
 // Display One Student
 // ==========================================
@@ -89,20 +79,12 @@ void DisplayStudent(
     cout << "Name: " << Name << "\n";
     cout << "ID: " << Id << "\n";
     cout << "Mark: " << Mark << "\n";
-
     cout << "Percentage: "
-         << static_cast<double>(Mark) / 1000 * 100
-         << "%\n";
-
-    cout << "Grade: "
-         << GetGradeName(Mark)
-         << "\n";
-
+         << static_cast<double>(Mark) / 1000 * 100 << "%\n";
+    cout << "Grade: " << GetGradeName(Mark) << "\n";
     cout << "Letter Grade: "
-         << GetLetterGrade(Mark)
-         << "\n";
+         << GetLetterGrade(Mark) << "\n";
 }
-
 // ==========================================
 // Display All Students
 // ==========================================
@@ -114,17 +96,14 @@ void DisplayAllStudents(
         cout << "\nNo Students Found.\n";
         return;
     }
-
     cout << "\n=====================================\n";
     cout << "          All Students\n";
     cout << "=====================================\n";
-
     for (auto Val : Map)
     {
         string Name = Val.first;
         int Id = Val.second.first;
         int Mark = Val.second.second;
-
         cout << Name << " "
              << Id << " "
              << Mark << " "
@@ -135,7 +114,6 @@ void DisplayAllStudents(
              << "%\n";
     }
 }
-
 // ==========================================
 // Add New Student
 // ==========================================
@@ -144,31 +122,23 @@ void AddStudent(
 {
     string Name;
     int Id;
-
     cout << "\nEnter Student Name: ";
     cin >> Name;
-
     cout << "Enter Student ID: ";
     cin >> Id;
-
     if (IsIdExists(Map, Id))
     {
         cout << "This ID Already Exists!\n";
         return;
     }
-
     cout << "Enter Student Mark (0 - 1000): ";
-
     int Mark = GetValidMark();
-
     Map.insert({
         Name,
         {Id, Mark}
     });
-
     cout << "\nStudent Added Successfully!\n";
 }
-
 // ==========================================
 // Search Student By ID
 // ==========================================
