@@ -1,0 +1,1045 @@
+// ============================================================
+// Student Management System
+// ============================================================
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+#include <limits>
+#include <map>
+#include <stdexcept>
+#include <string>
+#include <vector>
+using namespace std;
+// ============================================================
+// Configuration
+// ============================================================
+constexpr int MAX_MARK = 1000;
+constexpr int PASS_MIN = 550;
+constexpr int BANNER_WIDTH = 44;
+constexpr char FIELD_SEPARATOR = '|';
+const string SAVE_FILE = "students.txt";
+const string REPORT_FILE = "student_report.txt";
+const string SEPARATOR(BANNER_WIDTH, '-');
+struct GradeInfo
+{
+    int Min;
+    const char* Name;
+    char Letter;
+};
+// Ordered from the highest threshold to the lowest.
+constexpr GradeInfo GRADES[] = {
+    {900, "Excellent", 'A'},
+    {850, "Very Good", 'B'},
+    {700, "Good", 'C'},
+    {550, "Pass", 'D'},
+    {0, "Fail", 'F'},
+};
+constexpr int GRADE_COUNT = static_cast<int>(size(GRADES));
+
+int GetGradeIndex(int Mark)
+{
+    for (int i = 0; i < GRADE_COUNT; ++i)
+    {
+        if (Mark >= GRADES[i].Min)
+        {
+            return i;
+        }
+    }
+    return GRADE_COUNT - 1;
+}
+
+const char* GetGradeName(int Mark)
+{
+    return GRADES[GetGradeIndex(Mark)].Name;
+}
+
+char GetLetterGrade(int Mark)
+{
+    return GRADES[GetGradeIndex(Mark)].Letter;
+}
+
+bool IsPassed(int Mark)
+{
+    return Mark >= PASS_MIN;
+}
+
+double GetPercentage(int Mark)
+{
+    return static_cast<double>(Mark) / MAX_MARK * 100;
+}
+
+// ============================================================
+// Data Types (the student ID is unique, so it is the map key)
+// ============================================================
+struct Student
+{
+    string Name;
+    int Id = 0;
+    int Mark = 0;
+};
+
+using StudentMap = map<int, Student>;
+using StudentFilter = function<bool(const Student&)>;
+
+// ============================================================
+// Console Input
+// ============================================================
+[[noreturn]] void ExitOnClosedInput()
+{
+    cout << "\nInput Closed. Exiting.\n";
+    exit(0);
+}
+
+int GetValidInteger(const string& Message)
+{
+    while (true)
+    {
+        cout << Message;
+
+        int Value;
+        if (cin >> Value)
+        {
+            // Discard the rest of the line (also handles input like "12abc").
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return Value;
+        }
+
+        if (cin.eof())
+        {
+            ExitOnClosedInput();
+        }
+
+        cout << "Invalid Input! Please Enter A Number.\n";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+}
+
+int GetIntegerWhere(const string& Message,
+                    const function<bool(int)>& IsValid,
+                    const string& ErrorMessage)
+{
+    while (true)
+    {
+        int Value = GetValidInteger(Message);
+        if (IsValid(Value))
+        {
+            return Value;
+        }
+        cout << ErrorMessage << "\n";
+    }
+}
+
+int GetValidMark(const string& Message = "Enter Mark (0 - 1000): ")
+{
+    return GetIntegerWhere(
+        Message,
+        [](int Value) { return Value >= 0 && Value <= MAX_MARK; },
+        "Mark Must Be Between 0 And " + to_string(MAX_MARK) + ".");
+}
+int GetValidId()
+{
+    return GetIntegerWhere(
+        "Enter Student ID: ",
+        [](int Value) { return Value > 0; },
+        "ID Must Be Greater Than 0.");
+}
+int GetValidPositiveNumber(const string& Message)
+{
+    return GetIntegerWhere(
+        Message,
+        [](int Value) { return Value > 0; },
+        "Please Enter A Number Greater Than 0.");
+}
+string GetStudentName(const string& Message)
+{
+    while (true)
+    {
+        cout << Message;
+
+        string Name;
+        if (!getline(cin, Name))
+        {
+            ExitOnClosedInput();
+        }
+
+        if (Name.empty())
+        {
+            cout << "Name Cannot Be Empty.\n";
+        }
+        else if (Name.find(FIELD_SEPARATOR) != string::npos)
+        {
+            cout << "Name Cannot Contain '" << FIELD_SEPARATOR << "'.\n";
+        }
+        else
+        {
+            return Name;
+        }
+    }
+}
+
+bool Confirm(const string& Message)
+{
+    return GetValidInteger(Message + " (1 = Yes, 0 = No): ") == 1;
+}
+
+// ============================================================
+// Lookup Helpers
+// ============================================================
+bool IsIdExists(const StudentMap& Map, int Id)
+{
+    return Map.count(Id) > 0;
+}
+
+// Asks for an ID until it is unique. AllowedId is the student's own
+// current ID (so keeping it unchanged during an update is allowed).
+int GetUniqueId(const StudentMap& Map, int AllowedId = -1)
+{
+    while (true)
+    {
+        int Id = GetValidId();
+        if (Id == AllowedId || !IsIdExists(Map, Id))
+        {
+            return Id;
+        }
+        cout << "This ID Already Exists!\n";
+    }
+}
+
+Student ReadNewStudent(const StudentMap& Map)
+{
+    Student S;
+    S.Name = GetStudentName("Enter Student Name: ");
+    S.Id = GetUniqueId(Map);
+    S.Mark = GetValidMark();
+    return S;
+}
+
+string ToLower(string Text)
+{
+    for (char& C : Text)
+    {
+        C = static_cast<char>(tolower(static_cast<unsigned char>(C)));
+    }
+    return Text;
+}
+
+// True if Query appears anywhere in Name, ignoring letter case.
+bool NameMatches(const string& Name, const string& Query)
+{
+    return ToLower(Name).find(ToLower(Query)) != string::npos;
+}
+
+vector<int> FindIdsByName(const StudentMap& Map, const string& Query)
+{
+    vector<int> Ids;
+    for (const auto& [Id, S] : Map)
+    {
+        if (NameMatches(S.Name, Query))
+        {
+            Ids.push_back(Id);
+        }
+    }
+    return Ids;
+}
+
+// ============================================================
+// Output Formatting
+// ============================================================
+void PrintBanner(ostream& Out, const string& Title)
+{
+    const string Line(BANNER_WIDTH, '=');
+    const int TitleLength = static_cast<int>(Title.size());
+    const int Padding = max(0, (BANNER_WIDTH - TitleLength) / 2);
+
+    Out << Line << "\n"
+        << string(Padding, ' ') << Title << "\n"
+        << Line << "\n";
+}
+
+void PrintHeader(const string& Title)
+{
+    cout << "\n";
+    PrintBanner(cout, Title);
+}
+
+void PrintLine(const Student& S, bool WithLetter = false)
+{
+    cout << S.Name << " | ID: " << S.Id << " | Mark: " << S.Mark
+         << " | Grade: " << GetGradeName(S.Mark);
+
+    if (WithLetter)
+    {
+        cout << " (" << GetLetterGrade(S.Mark) << ")";
+    }
+    cout << "\n";
+}
+
+void PrintDetailedLine(const Student& S)
+{
+    cout << fixed << setprecision(2);
+    cout << S.Name << " | ID: " << S.Id << " | Mark: " << S.Mark
+         << " | Grade: " << GetGradeName(S.Mark)
+         << " (" << GetLetterGrade(S.Mark) << ")"
+         << " | " << GetPercentage(S.Mark) << "%"
+         << " | " << (IsPassed(S.Mark) ? "Passed" : "Failed") << "\n";
+}
+
+// Full multi-line view, used both on screen and in the exported report.
+void PrintStudent(ostream& Out, const Student& S)
+{
+    Out << fixed << setprecision(2);
+    Out << "Name: " << S.Name << "\n"
+        << "ID: " << S.Id << "\n"
+        << "Mark: " << S.Mark << "\n"
+        << "Percentage: " << GetPercentage(S.Mark) << "%\n"
+        << "Grade: " << GetGradeName(S.Mark) << "\n"
+        << "Letter Grade: " << GetLetterGrade(S.Mark) << "\n"
+        << "Status: " << (IsPassed(S.Mark) ? "Passed" : "Failed") << "\n";
+}
+
+void DisplayFiltered(const string& Title,
+                     const StudentMap& Map,
+                     const StudentFilter& Filter,
+                     bool WithLetter = false)
+{
+    PrintHeader(Title);
+
+    bool Found = false;
+    for (const auto& [Id, S] : Map)
+    {
+        if (Filter(S))
+        {
+            PrintLine(S, WithLetter);
+            Found = true;
+        }
+    }
+
+    if (!Found)
+    {
+        cout << "No Students Found.\n";
+    }
+}
+// ============================================================
+// Sorting
+// ============================================================
+vector<Student> SortedByMark(const StudentMap& Map, bool Descending)
+{
+    vector<Student> Students;
+    for (const auto& [Id, S] : Map)
+    {
+        Students.push_back(S);
+    }
+
+    // The map is already ordered by ID, and stable_sort keeps that order
+    // between students who have equal marks.
+    stable_sort(Students.begin(), Students.end(),
+                [Descending](const Student& A, const Student& B)
+                {
+                    return Descending ? A.Mark > B.Mark : A.Mark < B.Mark;
+                });
+    return Students;
+}
+// ============================================================
+// Statistics (calculated once, used on screen and in the report)
+// ============================================================
+struct Stats
+{
+    int Count = 0;
+    int Sum = 0;
+    int Min = MAX_MARK;
+    int Max = 0;
+    int Passed = 0;
+    int Failed = 0;
+    int PassedSum = 0;
+    int FailedSum = 0;
+    int AboveAverage = 0;
+    int BelowAverage = 0;
+    int EqualAverage = 0;
+    int GradeCounts[GRADE_COUNT] = {};
+    double Average = 0;
+    double Median = 0;
+};
+
+double CalculateMedian(vector<int> Marks)
+{
+    sort(Marks.begin(), Marks.end());
+
+    const size_t Middle = Marks.size() / 2;
+    if (Marks.size() % 2 == 1)
+    {
+        return Marks[Middle];
+    }
+    return (Marks[Middle - 1] + Marks[Middle]) / 2.0;
+}
+
+Stats CalculateStats(const StudentMap& Map)
+{
+    Stats R;
+    if (Map.empty())
+    {
+        return R;
+    }
+
+    vector<int> Marks;
+    for (const auto& [Id, S] : Map)
+    {
+        Marks.push_back(S.Mark);
+
+        R.Sum += S.Mark;
+        R.Min = min(R.Min, S.Mark);
+        R.Max = max(R.Max, S.Mark);
+        R.GradeCounts[GetGradeIndex(S.Mark)]++;
+
+        if (IsPassed(S.Mark))
+        {
+            R.Passed++;
+            R.PassedSum += S.Mark;
+        }
+        else
+        {
+            R.Failed++;
+            R.FailedSum += S.Mark;
+        }
+    }
+
+    R.Count = static_cast<int>(Marks.size());
+    R.Average = static_cast<double>(R.Sum) / R.Count;
+    R.Median = CalculateMedian(Marks);
+
+    for (int Mark : Marks)
+    {
+        const double Value = static_cast<double>(Mark);
+        if (Value > R.Average)
+        {
+            R.AboveAverage++;
+        }
+        else if (Value < R.Average)
+        {
+            R.BelowAverage++;
+        }
+        else
+        {
+            R.EqualAverage++;
+        }
+    }
+    return R;
+}
+
+void PrintStats(ostream& Out, const Stats& R)
+{
+    const double PassRate = static_cast<double>(R.Passed) / R.Count * 100;
+    const double FailRate = static_cast<double>(R.Failed) / R.Count * 100;
+
+    Out << fixed << setprecision(2);
+    Out << "Total Students: " << R.Count << "\n"
+        << "Total Grades: " << R.Sum << "\n"
+        << "Average: " << R.Average << "\n"
+        << "Median: " << R.Median << "\n"
+        << "Highest Grade: " << R.Max << "\n"
+        << "Lowest Grade: " << R.Min << "\n"
+        << "Difference: " << R.Max - R.Min << "\n";
+
+    Out << "\nPassed Students: " << R.Passed << "\n"
+        << "Failed Students: " << R.Failed << "\n"
+        << "Pass Rate: " << PassRate << "%\n"
+        << "Fail Rate: " << FailRate << "%\n";
+
+    Out << "\nStudents Above Average: " << R.AboveAverage << "\n"
+        << "Students Below Average: " << R.BelowAverage << "\n"
+        << "Students Equal To Average: " << R.EqualAverage << "\n";
+
+    Out << "\nSum Of Passed Grades: " << R.PassedSum << "\n"
+        << "Sum Of Failed Grades: " << R.FailedSum << "\n";
+    Out << "\nLetter Grade Statistics:\n";
+    for (int i = 0; i < GRADE_COUNT; ++i)
+    {
+        Out << GRADES[i].Letter << ": " << R.GradeCounts[i] << "\n";
+    }
+}
+bool HasStudents(const StudentMap& Map)
+{
+    if (Map.empty())
+    {
+        cout << "\nNo Students Found.\n";
+        return false;
+    }
+    return true;
+}
+
+void ShowAdvancedStatistics(const StudentMap& Map)
+{
+    if (!HasStudents(Map))
+    {
+        return;
+    }
+    PrintHeader("ADVANCED STATISTICS");
+    PrintStats(cout, CalculateStats(Map));
+}
+
+void HighestLowestEachGrade(const StudentMap& Map)
+{
+    if (!HasStudents(Map))
+    {
+        return;
+    }
+
+    struct GradeStats
+    {
+        int Max = -1;
+        int Min = MAX_MARK + 1;
+        int Count = 0;
+        int Sum = 0;
+    };
+
+    GradeStats PerGrade[GRADE_COUNT];
+    for (const auto& [Id, S] : Map)
+    {
+        GradeStats& G = PerGrade[GetGradeIndex(S.Mark)];
+        G.Max = max(G.Max, S.Mark);
+        G.Min = min(G.Min, S.Mark);
+        G.Count++;
+        G.Sum += S.Mark;
+    }
+
+    PrintHeader("Grade Detailed Statistics");
+    cout << fixed << setprecision(2);
+
+    for (int i = 0; i < GRADE_COUNT; ++i)
+    {
+        const GradeStats& G = PerGrade[i];
+        cout << "\n" << GRADES[i].Name << ":\n";
+
+        if (G.Count == 0)
+        {
+            cout << "No Students\n";
+            continue;
+        }
+
+        cout << "Students: " << G.Count << "\n"
+             << "Highest: " << G.Max << "\n"
+             << "Lowest: " << G.Min << "\n"
+             << "Average: " << static_cast<double>(G.Sum) / G.Count << "\n";
+    }
+}
+
+void DisplayTopOrBottomN(const StudentMap& Map, bool Top)
+{
+    if (!HasStudents(Map))
+    {
+        return;
+    }
+
+    const string Prompt = Top ? "\nEnter Number Of Top Students: "
+                              : "\nEnter Number Of Lowest Students: ";
+    int N = GetValidPositiveNumber(Prompt);
+
+    const vector<Student> Students = SortedByMark(Map, Top);
+    N = min(N, static_cast<int>(Students.size()));
+
+    PrintHeader((Top ? "Top " : "Lowest ") + to_string(N) + " Students");
+    for (int i = 0; i < N; ++i)
+    {
+        cout << i + 1 << ". ";
+        PrintLine(Students[i]);
+    }
+}
+
+void DisplayHighestStudents(const StudentMap& Map)
+{
+    if (!HasStudents(Map))
+    {
+        return;
+    }
+
+    const int MaxMark = CalculateStats(Map).Max;
+    DisplayFiltered("Highest Mark (" + to_string(MaxMark) + ")", Map,
+                    [MaxMark](const Student& S) { return S.Mark == MaxMark; },
+                    true);
+}
+
+// ============================================================
+// Student Operations
+// ============================================================
+void AddStudent(StudentMap& Map)
+{
+    cout << "\n";
+    const Student S = ReadNewStudent(Map);
+    Map[S.Id] = S;
+    cout << "\nStudent Added Successfully!\n";
+}
+
+void UpdateStudent(StudentMap& Map)
+{
+    const int OldId = GetValidId();
+    const auto It = Map.find(OldId);
+    if (It == Map.end())
+    {
+        cout << "\nStudent Not Found!\n";
+        return;
+    }
+
+    Student Updated = It->second;
+    cout << "\nCurrent Student Data:\n";
+    PrintStudent(cout, Updated);
+
+    cout << "\n========== Update Menu ==========\n"
+            "1. Change Name\n"
+            "2. Change ID\n"
+            "3. Change Mark\n"
+            "4. Change All\n"
+            "0. Cancel\n";
+    const int Choice = GetValidInteger("Enter Choice: ");
+
+    if (Choice == 0)
+    {
+        cout << "Update Cancelled.\n";
+        return;
+    }
+    if (Choice < 0 || Choice > 4)
+    {
+        cout << "Invalid Choice.\n";
+        return;
+    }
+
+    const bool ChangeAll = (Choice == 4);
+    if (Choice == 1 || ChangeAll)
+    {
+        Updated.Name = GetStudentName("Enter New Name: ");
+    }
+    if (Choice == 2 || ChangeAll)
+    {
+        Updated.Id = GetUniqueId(Map, OldId);
+    }
+    if (Choice == 3 || ChangeAll)
+    {
+        Updated.Mark = GetValidMark();
+    }
+
+    // The ID is the map key, so the old entry must go if the ID changed.
+    if (Updated.Id != OldId)
+    {
+        Map.erase(OldId);
+    }
+    Map[Updated.Id] = Updated;
+
+    cout << "\nStudent Updated Successfully!\n";
+}
+
+void DeleteStudent(StudentMap& Map)
+{
+    const int Id = GetValidId();
+    const auto It = Map.find(Id);
+    if (It == Map.end())
+    {
+        cout << "\nStudent Not Found!\n";
+        return;
+    }
+
+    cout << "\nStudent Found:\n";
+    PrintStudent(cout, It->second);
+
+    if (Confirm("\nAre You Sure You Want To Delete This Student?"))
+    {
+        Map.erase(It);
+        cout << "\nStudent Deleted Successfully!\n";
+    }
+    else
+    {
+        cout << "Operation Cancelled.\n";
+    }
+}
+
+void DeleteByName(StudentMap& Map)
+{
+    const string Query = GetStudentName("\nEnter Student Name (Or Part Of It): ");
+    const vector<int> Ids = FindIdsByName(Map, Query);
+
+    if (Ids.empty())
+    {
+        cout << "No Students Found With This Name.\n";
+        return;
+    }
+
+    cout << "\n";
+    for (int Id : Ids)
+    {
+        PrintLine(Map.at(Id));
+    }
+    cout << "\nFound " << Ids.size() << " Student(s).\n";
+
+    if (!Confirm("Delete All Of Them?"))
+    {
+        cout << "Operation Cancelled.\n";
+        return;
+    }
+
+    for (int Id : Ids)
+    {
+        Map.erase(Id);
+    }
+    cout << "\n" << Ids.size() << " Student(s) Deleted.\n";
+}
+
+// ============================================================
+// Search, Sort And Filter
+// ============================================================
+void DisplayAllStudents(const StudentMap& Map)
+{
+    if (!HasStudents(Map))
+    {
+        return;
+    }
+
+    PrintHeader("All Students");
+    for (const auto& [Id, S] : Map)
+    {
+        PrintDetailedLine(S);
+    }
+}
+
+void SearchStudentById(const StudentMap& Map)
+{
+    const int Id = GetValidId();
+    const auto It = Map.find(Id);
+    if (It == Map.end())
+    {
+        cout << "\nStudent With ID " << Id << " Not Found.\n";
+        return;
+    }
+
+    PrintHeader("Student Found");
+    PrintStudent(cout, It->second);
+}
+
+void SearchByName(const StudentMap& Map)
+{
+    const string Query = GetStudentName("\nEnter Student Name (Or Part Of It): ");
+    const vector<int> Ids = FindIdsByName(Map, Query);
+
+    if (Ids.empty())
+    {
+        cout << "Student Not Found.\n";
+        return;
+    }
+
+    PrintHeader("Students Matching: " + Query);
+    for (int Id : Ids)
+    {
+        PrintStudent(cout, Map.at(Id));
+        cout << SEPARATOR << "\n";
+    }
+}
+
+void SearchByMarkRange(const StudentMap& Map)
+{
+    if (!HasStudents(Map))
+    {
+        return;
+    }
+
+    int Minimum = GetValidMark("\nEnter Minimum Mark (0 - 1000): ");
+    int Maximum = GetValidMark("Enter Maximum Mark (0 - 1000): ");
+    if (Minimum > Maximum)
+    {
+        swap(Minimum, Maximum);
+    }
+
+    DisplayFiltered(
+        "Students Between " + to_string(Minimum) + " And " + to_string(Maximum),
+        Map,
+        [Minimum, Maximum](const Student& S)
+        {
+            return S.Mark >= Minimum && S.Mark <= Maximum;
+        });
+}
+
+void SortStudentsByMark(const StudentMap& Map)
+{
+    if (!HasStudents(Map))
+    {
+        return;
+    }
+
+    cout << "\n1. Highest To Lowest\n"
+            "2. Lowest To Highest\n";
+    const int Choice = GetValidInteger("Enter Choice: ");
+    if (Choice != 1 && Choice != 2)
+    {
+        cout << "Invalid Choice.\n";
+        return;
+    }
+
+    PrintHeader("Students Sorted By Mark");
+    for (const Student& S : SortedByMark(Map, Choice == 1))
+    {
+        PrintLine(S);
+    }
+}
+
+void DisplayStudentsAboveGrade(const StudentMap& Map)
+{
+    const int MinimumMark = GetValidMark("Enter Minimum Mark (0 - 1000): ");
+    DisplayFiltered("Students With Mark >= " + to_string(MinimumMark), Map,
+                    [MinimumMark](const Student& S) { return S.Mark >= MinimumMark; },
+                    true);
+}
+
+// ============================================================
+// File Operations
+// ============================================================
+void SaveToFile(const StudentMap& Map)
+{
+    ofstream File(SAVE_FILE);
+    if (!File)
+    {
+        cout << "\nError Opening File!\n";
+        return;
+    }
+
+    for (const auto& [Id, S] : Map)
+    {
+        File << S.Name << FIELD_SEPARATOR << S.Id << FIELD_SEPARATOR << S.Mark << "\n";
+    }
+    cout << "\nData Saved Successfully To " << SAVE_FILE << "\n";
+}
+
+// Parses one "Name|Id|Mark" line. Returns false if the line is invalid.
+bool ParseStudentLine(const string& Line, Student& Result)
+{
+    const size_t Last = Line.rfind(FIELD_SEPARATOR);
+    if (Last == string::npos || Last == 0)
+    {
+        return false;
+    }
+
+    const size_t Middle = Line.rfind(FIELD_SEPARATOR, Last - 1);
+    if (Middle == string::npos)
+    {
+        return false;
+    }
+
+    try
+    {
+        Result.Name = Line.substr(0, Middle);
+        Result.Id = stoi(Line.substr(Middle + 1, Last - Middle - 1));
+        Result.Mark = stoi(Line.substr(Last + 1));
+    }
+    catch (const exception&)
+    {
+        return false;
+    }
+
+    return !Result.Name.empty() && Result.Id > 0 &&
+           Result.Mark >= 0 && Result.Mark <= MAX_MARK;
+}
+
+// Loads into a temporary map first, so the current data is only replaced
+// when the file could actually be read.
+bool LoadFromFile(StudentMap& Map)
+{
+    ifstream File(SAVE_FILE);
+    if (!File)
+    {
+        cout << "\nNo Save File Found.\n";
+        return false;
+    }
+
+    StudentMap Loaded;
+    int Skipped = 0;
+    string Line;
+
+    while (getline(File, Line))
+    {
+        if (Line.empty())
+        {
+            continue;
+        }
+
+        Student S;
+        if (ParseStudentLine(Line, S) && !IsIdExists(Loaded, S.Id))
+        {
+            Loaded[S.Id] = S;
+        }
+        else
+        {
+            ++Skipped;
+        }
+    }
+
+    Map = move(Loaded);
+
+    cout << "\nData Loaded Successfully (" << Map.size() << " Students";
+    if (Skipped > 0)
+    {
+        cout << ", " << Skipped << " Invalid Line(s) Skipped";
+    }
+    cout << ").\n";
+    return true;
+}
+
+void ExportReport(const StudentMap& Map)
+{
+    if (Map.empty())
+    {
+        cout << "\nNo Students To Export.\n";
+        return;
+    }
+
+    ofstream File(REPORT_FILE);
+    if (!File)
+    {
+        cout << "\nError Creating Report File!\n";
+        return;
+    }
+
+    PrintBanner(File, "STUDENT MANAGEMENT REPORT");
+    File << "\n";
+    PrintStats(File, CalculateStats(Map));
+
+    File << "\n";
+    PrintBanner(File, "STUDENTS");
+    File << "\n";
+    for (const auto& [Id, S] : Map)
+    {
+        PrintStudent(File, S);
+        File << SEPARATOR << "\n";
+    }
+
+    cout << "\nReport Exported Successfully To " << REPORT_FILE << "\n";
+}
+
+// ============================================================
+// Menus
+// ============================================================
+void StatisticsMenu(const StudentMap& Map)
+{
+    while (true)
+    {
+        PrintHeader("Statistics Menu");
+        cout << "1. Advanced Statistics\n"
+                "2. Highest / Lowest Per Grade\n"
+                "3. Top N Students\n"
+                "4. Lowest N Students\n"
+                "5. Highest Grade Students\n"
+                "6. Passed Students\n"
+                "7. Failed Students\n"
+                "0. Back\n";
+
+        switch (GetValidInteger("Enter Choice: "))
+        {
+            case 1: ShowAdvancedStatistics(Map); break;
+            case 2: HighestLowestEachGrade(Map); break;
+            case 3: DisplayTopOrBottomN(Map, true); break;
+            case 4: DisplayTopOrBottomN(Map, false); break;
+            case 5: DisplayHighestStudents(Map); break;
+            case 6:
+                DisplayFiltered("Passed Students", Map,
+                                [](const Student& S) { return IsPassed(S.Mark); });
+                break;
+            case 7:
+                DisplayFiltered("Failed Students", Map,
+                                [](const Student& S) { return !IsPassed(S.Mark); });
+                break;
+            case 0: return;
+            default: cout << "Invalid Choice!\n";
+        }
+    }
+}
+
+void PrintMainMenu()
+{
+    cout << "\n\n";
+    PrintBanner(cout, "Student Management System");
+    cout << "1.  Display All Students\n"
+            "2.  Add New Student\n"
+            "3.  Search By Name\n"
+            "4.  Search By ID\n"
+            "5.  Search By Mark Range\n"
+            "6.  Update Student\n"
+            "7.  Delete Student By ID\n"
+            "8.  Delete All Students By Name\n"
+            "9.  Sort Students By Mark\n"
+            "10. Students Above Specific Grade\n"
+            "11. Statistics Menu\n"
+            "12. Save Data\n"
+            "13. Load Data\n"
+            "14. Export Report\n"
+            "0.  Exit\n"
+         << string(BANNER_WIDTH, '=') << "\n";
+}
+// Returns false when the user chooses to exit.
+bool HandleMainMenuChoice(int Choice, StudentMap& Map)
+{
+    switch (Choice)
+    {
+        case 1: DisplayAllStudents(Map); break;
+        case 2: AddStudent(Map); break;
+        case 3: SearchByName(Map); break;
+        case 4: SearchStudentById(Map); break;
+        case 5: SearchByMarkRange(Map); break;
+        case 6: UpdateStudent(Map); break;
+        case 7: DeleteStudent(Map); break;
+        case 8: DeleteByName(Map); break;
+        case 9: SortStudentsByMark(Map); break;
+        case 10: DisplayStudentsAboveGrade(Map); break;
+        case 11: StatisticsMenu(Map); break;
+        case 12: SaveToFile(Map); break;
+        case 13:
+            if (Confirm("Loading Will Replace Current Data. Continue?"))
+            {
+                LoadFromFile(Map);
+            }
+            break;
+        case 14: ExportReport(Map); break;
+        case 0:
+            if (Confirm("Save Data Before Exit?"))
+            {
+                SaveToFile(Map);
+            }
+            cout << "\nProgram Ended.\n";
+            return false;
+        default: cout << "\nInvalid Choice!\n";
+    }
+    return true;
+}
+// ============================================================
+// Startup
+// ============================================================
+void ReadInitialStudents(StudentMap& Map)
+{
+    const int Count = GetValidPositiveNumber("\nEnter Number Of Students: ");
+    for (int i = 1; i <= Count; ++i)
+    {
+        PrintHeader("Student " + to_string(i));
+        const Student S = ReadNewStudent(Map);
+        Map[S.Id] = S;
+    }
+}
+int main()
+{
+    StudentMap Map;
+    PrintBanner(cout, "Student Management System");
+    cout << "\nDo You Want To Load Saved Data?\n"
+            "1. Yes\n"
+            "0. No\n";
+    if (GetValidInteger("Enter Choice: ") == 1)
+    {
+        LoadFromFile(Map);
+    }
+
+    if (Map.empty())
+    {
+        ReadInitialStudents(Map);
+    }
+    do
+    {
+        PrintMainMenu();
+    } while (HandleMainMenuChoice(GetValidInteger("Enter Your Choice: "), Map));
+    return 0;
+}
